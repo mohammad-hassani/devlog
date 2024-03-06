@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model represents registered users of the website.
+model User {
+  id           Int           @id @default(autoincrement())
+  email        String?       @unique
+  emailverified     Boolean       @default(false)
+  username     String        @unique
+  password     String        // In a real application, you should use a secure password hashing mechanism.
+  karma        Int           @default(0)
+  about        String?
+  avatar       String?       // Store the URL or file path of the user's avatar
+  createdAt    DateTime      @default(now())
+  favorites    Int[]         @default([])
+  verified     Boolean       @default(false)
+  posts        Post[]        // A user can have multiple posts.
+  comments     Comment[]     // A user can write multiple comments.
+  likes        Like[]
+  status       UserStatus    @default(ACTIVE)
+  type         UserType      @default(USER)
+}
+
+// Enum type for user status
+enum UserStatus {
+  ACTIVE
+  DEACTIVE
+  SPAMMER
+}
+
+// Enum type for user type
+enum UserType {
+  USER
+  ADMIN
+}
+
+// Post model represents individual posts submitted by users.
+model Post {
+  id        Int        @id @default(autoincrement())
+  title     String     @db.VarChar(80)
+  url       String?
+  content   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  published Boolean    @default(false)
+  points    Int        @default(0) // Changed from viewCount to points
+  type      PostType   // Enum type for post categorization (link, discuss, ask, job)
+  author    User       @relation(fields: [authorId], references: [id])
+  authorId  Int
+  comments Comment[]   // A post can have multiple comments.
+  likes    Like[]      // A post can have multiple likes.
+}
+
+// Enum type for post categorization (link, discuss, ask, job)
+enum PostType {
+  LINK
+  DISCUSS
+  ASK
+  JOB
+}
+
+// Comment model represents comments made by users on posts.
+model Comment {
+  id        Int        @id @default(autoincrement())
+  content   String     @db.VarChar(2000)
+  points    Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  author    User       @relation(fields: [authorId], references: [id])
+  authorId  Int
+  post      Post       @relation(fields: [postId], references: [id])
+  postId    Int
+  parent    Comment?   @relation("ChildComments", fields: [parentId], references: [id])
+  parentId  Int?
+  children  Comment[]   @relation("ChildComments")
+  likes    Like[] // A comment can have multiple likes.
+}
+
+// Like model represents likes made by users on posts.
+model Like {
+  id        Int        @id @default(autoincrement())
+  value     Int        // 1 for upvote, -1 for downvote
+  userId    Int
+  postId    Int
+  commentId Int?
+  post      Post       @relation(fields: [postId], references: [id])
+  comment   Comment?   @relation(fields: [commentId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+}
